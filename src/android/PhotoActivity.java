@@ -33,6 +33,13 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import uk.co.senab.photoview.PhotoViewAttacher;
 
+import android.app.ActivityManager;
+import android.util.Log;
+import android.view.KeyEvent;
+import android.content.Intent;
+import android.content.Context;
+
+
 public class PhotoActivity extends Activity {
     private PhotoViewAttacher mAttacher;
 
@@ -52,6 +59,8 @@ public class PhotoActivity extends Activity {
     private File mTempImage;
     private int shareBtnVisibility;
 
+    String TAG = "PhotoViewer";
+    Intent closeDialog = new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
     public static JSONArray mArgs = null;
 
     @Override
@@ -321,5 +330,42 @@ public class PhotoActivity extends Activity {
             e.printStackTrace();
         }
         return headers;
+    }
+
+    public boolean keyCodeBlockTest(int keyCode) {
+        return (keyCode == KeyEvent.KEYCODE_HOME) || (keyCode == KeyEvent.KEYCODE_BACK) || (keyCode == KeyEvent.KEYCODE_MENU) || (keyCode == KeyEvent.KEYCODE_POWER)
+                || (keyCode == KeyEvent.KEYCODE_ALL_APPS) || (keyCode == KeyEvent.KEYCODE_APP_SWITCH) || (keyCode == KeyEvent.KEYCODE_VOLUME_UP) || (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) || (keyCode == KeyEvent.KEYCODE_VOLUME_MUTE);
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        Log.d(TAG, "RAW " + event.getKeyCode() + " -> " + KeyEvent.keyCodeToString(event.getKeyCode()));
+        if (keyCodeBlockTest(event.getKeyCode())) {
+            sendBroadcast(closeDialog);
+            Log.d(TAG, "Blocked " + event.getKeyCode() + " -> " + KeyEvent.keyCodeToString(event.getKeyCode()));
+            return true;
+        } else {
+            Log.d(TAG, "Allowed " + event.getKeyCode() + " -> " + KeyEvent.keyCodeToString(event.getKeyCode()));
+            return super.dispatchKeyEvent(event);
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        sendBroadcast(closeDialog);
+        Log.d(TAG, "Focus changed !");
+        if (!hasFocus) {
+            Log.d(TAG, "Lost focus !");
+            sendBroadcast(closeDialog);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        Log.d(TAG, "onPause");
+        super.onPause();
+        ActivityManager activityManager = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
+        activityManager.moveTaskToFront(getTaskId(), 0);
     }
 }
